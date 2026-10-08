@@ -41,55 +41,55 @@ export default function ChatArea({
     messages.length > 0
       ? messages
       : [
-          {
-            id: 'msg-1',
-            role: 'user',
-            content: 'What objects are visible in this image?',
-            timestamp: '10:32 AM',
+        {
+          id: 'msg-1',
+          role: 'user',
+          content: 'What objects are visible in this image?',
+          timestamp: '10:32 AM',
+        },
+        {
+          id: 'msg-2',
+          role: 'assistant',
+          content: 'I can see several objects in this image:',
+          items: [
+            { id: 1, label: 'Laptop', color: '#1570ef', text: 'on the left side of the table.' },
+            { id: 2, label: 'Mug', color: '#d97706', text: 'to the right of the laptop.' },
+            { id: 3, label: 'Notebook', color: '#e11d48', text: 'in front of the laptop with a pen on it.' },
+            { id: 4, label: 'Plant', color: '#059669', text: 'behind the mug.' },
+          ],
+          evidenceCrops: [
+            { id: 1, thumb: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=80&q=80' },
+            { id: 2, thumb: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=80&q=80' },
+            { id: 3, thumb: 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=80&q=80' },
+            { id: 4, thumb: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=80&q=80' },
+          ],
+          heroCrop: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=300&q=80',
+          timestamp: '10:32 AM',
+        },
+        {
+          id: 'msg-3',
+          role: 'user',
+          content: 'What is the notebook used for?',
+          timestamp: '10:33 AM',
+        },
+        {
+          id: 'msg-4',
+          role: 'assistant',
+          content:
+            'The notebook appears to be a spiral-bound notebook used for writing notes. Based on the image, it is commonly used for:',
+          bullets: [
+            'Taking study notes',
+            'Writing ideas or plans',
+            'Solving problems',
+            'Keeping track of tasks',
+          ],
+          evidenceCard: {
+            label: 'Notebook',
+            thumb: 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=240&q=80',
           },
-          {
-            id: 'msg-2',
-            role: 'assistant',
-            content: 'I can see several objects in this image:',
-            items: [
-              { id: 1, label: 'Laptop', color: '#1570ef', text: 'on the left side of the table.' },
-              { id: 2, label: 'Mug', color: '#d97706', text: 'to the right of the laptop.' },
-              { id: 3, label: 'Notebook', color: '#e11d48', text: 'in front of the laptop with a pen on it.' },
-              { id: 4, label: 'Plant', color: '#059669', text: 'behind the mug.' },
-            ],
-            evidenceCrops: [
-              { id: 1, thumb: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=80&q=80' },
-              { id: 2, thumb: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=80&q=80' },
-              { id: 3, thumb: 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=80&q=80' },
-              { id: 4, thumb: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=80&q=80' },
-            ],
-            heroCrop: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=300&q=80',
-            timestamp: '10:32 AM',
-          },
-          {
-            id: 'msg-3',
-            role: 'user',
-            content: 'What is the notebook used for?',
-            timestamp: '10:33 AM',
-          },
-          {
-            id: 'msg-4',
-            role: 'assistant',
-            content:
-              'The notebook appears to be a spiral-bound notebook used for writing notes. Based on the image, it is commonly used for:',
-            bullets: [
-              'Taking study notes',
-              'Writing ideas or plans',
-              'Solving problems',
-              'Keeping track of tasks',
-            ],
-            evidenceCard: {
-              label: 'Notebook',
-              thumb: 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=240&q=80',
-            },
-            timestamp: '10:33 AM',
-          },
-        ];
+          timestamp: '10:33 AM',
+        },
+      ];
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row min-w-0 bg-[var(--color-surface-canvas)] overflow-hidden">
@@ -110,11 +110,10 @@ export default function ChatArea({
         <div className="h-12 border-b border-[var(--color-neutral-200)] px-4 flex items-center gap-4 text-xs font-semibold shrink-0 bg-[var(--color-surface-default)]">
           <button
             onClick={() => setActiveTab('conversation')}
-            className={`h-full flex items-center gap-1.5 border-b-2 transition-colors ${
-              activeTab === 'conversation'
+            className={`h-full flex items-center gap-1.5 border-b-2 transition-colors ${activeTab === 'conversation'
                 ? 'border-[var(--color-blue-600)] text-[var(--color-blue-600)] font-bold'
                 : 'border-transparent text-[var(--color-neutral-600)] hover:text-[var(--color-neutral-900)]'
-            }`}
+              }`}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -124,11 +123,10 @@ export default function ChatArea({
 
           <button
             onClick={() => setActiveTab('summary')}
-            className={`h-full flex items-center gap-1.5 border-b-2 transition-colors ${
-              activeTab === 'summary'
+            className={`h-full flex items-center gap-1.5 border-b-2 transition-colors ${activeTab === 'summary'
                 ? 'border-[var(--color-blue-600)] text-[var(--color-blue-600)] font-bold'
                 : 'border-transparent text-[var(--color-neutral-600)] hover:text-[var(--color-neutral-900)]'
-            }`}
+              }`}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -138,11 +136,10 @@ export default function ChatArea({
 
           <button
             onClick={() => setActiveTab('objects')}
-            className={`h-full flex items-center gap-1.5 border-b-2 transition-colors ${
-              activeTab === 'objects'
+            className={`h-full flex items-center gap-1.5 border-b-2 transition-colors ${activeTab === 'objects'
                 ? 'border-[var(--color-blue-600)] text-[var(--color-blue-600)] font-bold'
                 : 'border-transparent text-[var(--color-neutral-600)] hover:text-[var(--color-neutral-900)]'
-            }`}
+              }`}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -152,11 +149,10 @@ export default function ChatArea({
 
           <button
             onClick={() => setActiveTab('compare')}
-            className={`h-full flex items-center gap-1.5 border-b-2 transition-colors ${
-              activeTab === 'compare'
+            className={`h-full flex items-center gap-1.5 border-b-2 transition-colors ${activeTab === 'compare'
                 ? 'border-[var(--color-blue-600)] text-[var(--color-blue-600)] font-bold'
                 : 'border-transparent text-[var(--color-neutral-600)] hover:text-[var(--color-neutral-900)]'
-            }`}
+              }`}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -173,7 +169,7 @@ export default function ChatArea({
                 /* USER QUESTION BUBBLE */
                 <div className="flex items-start justify-end gap-2">
                   <div className="flex flex-col items-end">
-                    <div className="px-4 py-2.5 rounded-2xl rounded-tr-xs bg-[var(--chat-user-bg)] text-[var(--color-neutral-900)] text-xs font-semibold max-w-[85%] border border-blue-100 shadow-xs">
+                    <div className="px-4 py-2.5 rounded-2xl rounded-tr-xs bg-[var(--chat-user-bg)] text-white text-xs font-semibold max-w-[85%] border border-blue-100 shadow-xs">
                       {msg.content}
                     </div>
                     <span className="text-[10px] text-[var(--color-neutral-500)] mt-1">{msg.timestamp}</span>
@@ -362,11 +358,10 @@ export default function ChatArea({
             <button
               type="submit"
               disabled={!inputQuestion.trim() || isLoading}
-              className={`p-2 rounded-lg text-white font-bold text-xs flex items-center justify-center transition-all ${
-                inputQuestion.trim() && !isLoading
+              className={`p-2 rounded-lg text-white font-bold text-xs flex items-center justify-center transition-all ${inputQuestion.trim() && !isLoading
                   ? 'bg-[var(--color-blue-600)] hover:bg-[var(--color-blue-700)] shadow-xs'
                   : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-              }`}
+                }`}
             >
               <svg className="w-4 h-4 transform rotate-45 -mt-0.5 -mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
