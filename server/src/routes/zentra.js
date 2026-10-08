@@ -127,7 +127,7 @@ router.post('/verify', upload.single('image'), async (req, res, next) => {
 
     // Resilient generation with automatic retry on temporary 503 spikes
     let response;
-    const modelsToTry = ['gemini-3.8-flash', 'gemini-2.5-flash'];
+    const modelsToTry = ['gemini-3.8-flash', 'gemini-3.6-flash','gemini-3.5-flash'];
     let lastError = null;
 
     for (const modelName of modelsToTry) {
@@ -176,6 +176,36 @@ router.post('/verify', upload.single('image'), async (req, res, next) => {
     });
   } catch (error) {
     console.error('[Zentra Verify Error]:', error);
+    next(error);
+  }
+});
+
+
+// GET Session History
+router.get('/session/:sessionId', async (req, res, next) => {
+  try {
+    const { sessionId } = req.params;
+
+    const historyResult = await pool.query(
+      'SELECT id, user_prompt, ai_response, created_at FROM session_history WHERE session_id = $1 ORDER BY created_at ASC',
+      [sessionId]
+    );
+
+    if (historyResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Session not found or has no history.' });
+    }
+
+    return res.status(200).json({
+      sessionId,
+      history: historyResult.rows.map((row) => ({
+        id: row.id,
+        userPrompt: row.user_prompt,
+        aiResponse: typeof row.ai_response === 'string' ? JSON.parse(row.ai_response) : row.ai_response,
+        createdAt: row.created_at,
+      })),
+    });
+  } catch (error) {
+    console.error('[Zentra Session Fetch Error]:', error);
     next(error);
   }
 });
