@@ -1,0 +1,72 @@
+@import 'tailwindcss';
+@import './design/tokens.css';
+
+@layer base {
+  :root,
+  [data-theme='light'] {
+    --bg-main: var(--color-neutral-50);
+    --bg-sidebar: #ffffff;
+    --bg-surface: #ffffff;
+    --bg-surface-hover: var(--color-neutral-100);
+    --border-color: var(--color-neutral-200);
+    --border-highlight: var(--color-blue-600);
+    --text-main: var(--color-neutral-900);
+    --text-muted: var(--color-neutral-600);
+    --text-subtle: var(--color-neutral-500);
+    --accent-blue: var(--color-blue-600);
+    --accent-blue-hover: var(--color-blue-700);
+    --accent-blue-bg: var(--color-blue-50);
+    --chat-user-bg: #eff8ff;
+    --chat-assistant-bg: #ffffff;
+  }
+
+  [data-theme='dark'] {
+    --bg-main: #0c111d;
+    --bg-sidebar: #101828;
+    --bg-surface: #1d2939;
+    --bg-surface-hover: #344054;
+    --border-color: #344054;
+    --border-highlight: var(--color-blue-500);
+    --text-main: #f9fafb;
+    --text-muted: #d0d5dd;
+    --text-subtle: #98a2b3;
+    --accent-blue: var(--color-blue-500);
+    --accent-blue-hover: var(--color-blue-400);
+    --accent-blue-bg: rgba(46, 144, 250, 0.15);
+    --chat-user-bg: #1d2939;
+    --chat-assistant-bg: #101828;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-family-sans);
+    transition: background-color 0.18s ease, color 0.18s ease;
+  }
+}
+
+/* Workbench Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-300);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-400);
+}
+
+/* Focus Ring Utility */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+

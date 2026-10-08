@@ -1,0 +1,14 @@
+@import './design/tokens.css';
+@import './design/token-page/DesignTokenPage.css';
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface-canvas);
+}
