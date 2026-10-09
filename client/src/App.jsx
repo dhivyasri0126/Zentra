@@ -1,139 +1,150 @@
-import { useEffect, useState } from 'react';
+                  import { useEffect, useState } from 'react';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import Header from './components/Header.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import ChatArea from './components/ChatArea.jsx';
 import NewSessionWizard from './components/NewSessionWizard.jsx';
 import SessionsTable from './components/SessionsTable.jsx';
-import ComparisonViewer from './components/ComparisonViewer.jsx';
+import ImageHistory from './components/ImageHistory.jsx';
+import ExamplesPage from './components/ExamplesPage.jsx';
 import LandingPage from './components/LandingPage.jsx';
 import ComponentReference from './components/ComponentReference.jsx';
-import { conversationApi, imageApi, chatApi } from './services/api/index.js';
+import { zentraApi } from './services/api/index.js';
 
 function AppContent() {
-  const [conversations, setConversations] = useState([]);
+  const [conversations, setConversations] = useState([]); // [] as default
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [activeImage, setActiveImage] = useState(null);
   const [previousImage, setPreviousImage] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([]); // [] as default
+  const [suggestedQuestions, setSuggestedQuestions] = useState([]); // [] as default
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [currentView, setCurrentView] = useState('workspace'); // 'workspace' | 'new-session' | 'sessions' | 'compare' | 'landing' | 'token-page'
-  const [sessionTitle, setSessionTitle] = useState('Study Desk Setup');
+  const [imageHistory, setImageHistory] = useState([]);
+  const [currentView, setCurrentView] = useState('workspace'); // workspace | new-session | sessions | image-history | examples | landing | token-page
+  const [sessionTitle, setSessionTitle] = useState('New Session');
 
-  // Initialize conversations on mount
+  // Restore persisted sessions so history survives browser refreshes.
   useEffect(() => {
-    async function initConversations() {
+    async function loadSessions() {
       try {
-        const data = await conversationApi.getConversations();
-        if (data && data.length > 0) {
-          setConversations(data);
-          setActiveConversationId(data[0].id);
-          if (data[0].title) setSessionTitle(data[0].title);
-          if (data[0].messages) setMessages(data[0].messages);
-        } else {
-          await handleNewConversation();
-        }
-      } catch (_err) {
-        // Fallback local session if backend unreachable
-        const fallbackId = `conv-${Date.now()}`;
-        const fallbackConv = {
-          id: fallbackId,
-          title: 'Study Desk Setup',
-          imageCount: '2 images',
-          time: '10:32 AM',
-          thumbnail: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=120&q=80',
-          created: new Date(),
-        };
-        setConversations([
-          fallbackConv,
-          {
-            id: 'conv-sample-2',
-            title: 'Lab Equipment',
-            imageCount: '3 images',
-            time: 'Oct 6',
-            thumbnail: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=120&q=80',
-          },
-          {
-            id: 'conv-sample-3',
-            title: 'Indoor Plants',
-            imageCount: '1 image',
-            time: 'Oct 5',
-            thumbnail: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=120&q=80',
-          },
+        const [res, imageRes] = await Promise.all([
+          zentraApi.getAllSessions(),
+          zentraApi.getImageHistory(),
         ]);
-        setActiveConversationId(fallbackId);
+        const restoredSessions = (res?.sessions || []).map((session) => ({
+          id: session.id,
+          title: session.title,
+          imageCount: session.imageCount,
+          messageCount: session.messageCount,
+          time: new Date(session.lastActivity).toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+          }),
+          created: session.createdAt,
+          thumbnail: session.thumbnail || '',
+        }));
+        setConversations(restoredSessions);
+        setImageHistory(imageRes?.images || []);
+      } catch (err) {
+        setErrorMessage(err.message || 'Unable to load image history. Please refresh and try again.');
       }
     }
-    initConversations();
+    loadSessions();
   }, []);
 
-  const handleNewConversation = async () => {
-    try {
-      const newConv = await conversationApi.createConversation();
-      setConversations((prev) => [newConv, ...prev]);
-      setActiveConversationId(newConv.id);
-      setActiveImage(null);
-      setPreviousImage(null);
-      setMessages([]);
-      setErrorMessage('');
-      setSessionTitle(newConv.title || 'New Session');
-    } catch (_err) {
-      const localId = `conv-${Date.now()}`;
-      const newConv = {
-        id: localId,
-        title: 'New Session',
-        imageCount: '1 image',
-        time: 'Just now',
-        thumbnail: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=120&q=80',
-        created: new Date(),
-      };
-      setConversations((prev) => [newConv, ...prev]);
-      setActiveConversationId(localId);
-      setActiveImage(null);
-      setPreviousImage(null);
-      setMessages([]);
-      setSessionTitle('New Session');
-    }
+  const handleNewConversation = () => {
+    setActiveConversationId(null);
+    setActiveImage(null);
+    setPreviousImage(null);
+    setMessages([]);
+    setSuggestedQuestions([]);
+    setErrorMessage('');
+    setSessionTitle('New Session');
   };
 
   const handleSelectConversation = async (id) => {
     setActiveConversationId(id);
     setErrorMessage('');
     const target = conversations.find((c) => c.id === id);
-    if (target) setSessionTitle(target.title);
+    if (target) {
+      setSessionTitle(target.title);
+      setActiveImage(
+        target.thumbnail
+          ? {
+              id: `history-${target.id}`,
+              name: target.title || 'Saved image',
+              url: target.thumbnail,
+              type: target.thumbnail.match(/^data:([^;]+)/)?.[1] || 'image/jpeg',
+            }
+          : null
+      );
+    }
 
     try {
-      const data = await conversationApi.getConversation(id);
-      if (data && data.messages) setMessages(data.messages);
-      if (data && data.activeImage) setActiveImage(data.activeImage);
-    } catch (_err) {
-      // Local fallback
+      const res = await zentraApi.getSessionHistory(id);
+      if (res?.history?.length > 0) {
+        const mappedMessages = [];
+        let latestSuggestions = [];
+
+        res.history.forEach((turn) => {
+          if (turn.userPrompt) {
+            mappedMessages.push({
+              role: 'user',
+              content: turn.userPrompt,
+              timestamp: new Date(turn.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            });
+          }
+
+          if (turn.aiResponse) {
+            const ai = turn.aiResponse;
+            if (ai.suggested_questions?.length > 0) latestSuggestions = ai.suggested_questions;
+            mappedMessages.push({
+              role: 'assistant',
+              content:
+                ai.verified_answer ||
+                (ai.sufficient ? 'Visual evidence verified.' : 'Visual evidence analysis completed.'),
+              sufficient: ai.sufficient,
+              missingEvidence: ai.missing_evidence,
+              nextBestView: ai.next_best_view_prompt,
+              timestamp: new Date(turn.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            });
+          }
+        });
+
+        setMessages(mappedMessages);
+        setSuggestedQuestions(latestSuggestions);
+      } else {
+        setMessages([]);
+        setSuggestedQuestions([]);
+      }
+    } catch {
+      // Keep existing messages if backend fetch fails
     }
   };
 
   const handleClearConversation = async (id) => {
     try {
-      await conversationApi.deleteConversation(id);
-    } catch (_err) {
-      // Fallback
-    }
-    const filtered = conversations.filter((c) => c.id !== id);
-    setConversations(filtered);
-    if (activeConversationId === id) {
-      if (filtered.length > 0) {
-        handleSelectConversation(filtered[0].id);
-      } else {
-        handleNewConversation();
+      await zentraApi.deleteSession(id);
+      const filtered = conversations.filter((c) => c.id !== id);
+      setConversations(filtered);
+      if (activeConversationId === id) {
+        if (filtered.length > 0) {
+          handleSelectConversation(filtered[0].id);
+        } else {
+          handleNewConversation();
+        }
       }
+    } catch (err) {
+      setErrorMessage(err.message || 'Unable to clear this session. Please try again.');
     }
   };
 
-  const handleUploadImage = async (file) => {
+  const handleUploadImage = async (file, analysisPrompt, startNewSession = false) => {
     setIsLoading(true);
-    setLoadingMessage('Uploading & validating image...');
+    setLoadingMessage('Uploading & evaluating visual evidence...');
     setErrorMessage('');
 
     try {
@@ -147,23 +158,68 @@ function AppContent() {
         file,
       };
 
-      const uploadRes = await imageApi.uploadImage(file, activeConversationId).catch(() => null);
-      if (uploadRes && uploadRes.imageId) {
-        newImageData.id = uploadRes.imageId;
-        newImageData.url = uploadRes.url;
-      }
-
       if (activeImage) setPreviousImage(activeImage);
       setActiveImage(newImageData);
 
-      const systemMessage = {
+      // Call backend
+      const result = await zentraApi.verifyVisualEvidence({
+        file,
+        sessionId: startNewSession ? undefined : activeConversationId || undefined,
+        userPrompt:
+          analysisPrompt?.trim() ||
+          'Identify the visible objects and describe the scene in this image. Only report what is visually supported by the image.',
+      });
+
+      // Store session info if new
+      if (result.sessionId) {
+        setActiveConversationId(result.sessionId);
+        setConversations((prev) => {
+          const exists = prev.find((c) => c.id === result.sessionId);
+          if (exists) return prev;
+          return [
+            {
+              id: result.sessionId,
+              title: file.name,
+              imageCount: '1 image',
+              time: 'Just now',
+              thumbnail: previewUrl,
+              created: new Date(),
+            },
+            ...prev,
+          ];
+        });
+      }
+
+      setImageHistory((prev) => [
+        {
+          id: `pending-${newImageData.id}`,
+          sessionId: result.sessionId,
+          sessionTitle: file.name,
+          name: file.name,
+          mimeType: file.type,
+          imageData: previewUrl,
+          createdAt: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+
+      if (result.suggested_questions?.length > 0) {
+        setSuggestedQuestions(result.suggested_questions);
+      }
+
+      const assistantMsg = {
         role: 'assistant',
-        content: `Uploaded image "${file.name}". You can now ask questions about this visual scene!`,
+        content:
+          result.verified_answer ||
+          (result.sufficient ? 'Visual evidence verified.' : `Image "${file.name}" received. Check suggested questions or ask below.`),
+        sufficient: result.sufficient,
+        missingEvidence: result.missing_evidence,
+        nextBestView: result.next_best_view_prompt,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages((prev) => [...prev, systemMessage]);
+      setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
-      setErrorMessage(err.message || 'Image upload failed. Please try again.');
+      setErrorMessage(err.message || 'Image evaluation failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -181,33 +237,36 @@ function AppContent() {
     setMessages((prev) => [...prev, userMsg]);
 
     setIsLoading(true);
-    setLoadingMessage('Analyzing visual features & checking evidence...');
+    setLoadingMessage('Validating evidence with Zentra AI Engine...');
 
     try {
-      const response = await chatApi
-        .sendMessage({
-          conversationId: activeConversationId,
-          question,
-          imageId: activeImage?.id,
-          previousImageId: previousImage?.id,
-        })
-        .catch(() => null);
+      const result = await zentraApi.verifyVisualEvidence({
+        file: activeImage?.file || undefined,
+        sessionId: activeConversationId || undefined,
+        userPrompt: question,
+      });
 
-      if (response && response.answer) {
-        const assistantMsg = {
-          role: 'assistant',
-          content: response.answer,
-          evidence: response.evidence,
-          visualEntities: response.visualEntities,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
-      } else {
-        const mockResponse = generateMockAnswer(question, activeImage);
-        setMessages((prev) => [...prev, mockResponse]);
+      if (result.sessionId && !activeConversationId) {
+        setActiveConversationId(result.sessionId);
       }
+
+      if (result.suggested_questions?.length > 0) {
+        setSuggestedQuestions(result.suggested_questions);
+      }
+
+      const assistantMsg = {
+        role: 'assistant',
+        content:
+          result.verified_answer ||
+          (result.sufficient ? 'Visual evidence verified.' : 'Evidence insufficient for a 100% verified answer.'),
+        sufficient: result.sufficient,
+        missingEvidence: result.missing_evidence,
+        nextBestView: result.next_best_view_prompt,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
-      setErrorMessage(err.message || "SceneTrace couldn't analyze this image. Please try again.");
+      setErrorMessage(err.message || "Zentra Vision couldn't verify this visual evidence. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -216,22 +275,16 @@ function AppContent() {
   const handleStartSessionFromWizard = (wizardData) => {
     handleNewConversation();
     if (wizardData.uploadedFile?.file) {
-      handleUploadImage(wizardData.uploadedFile.file);
-    }
-    if (wizardData.question) {
-      setTimeout(() => {
-        handleSendMessage(wizardData.question);
-      }, 500);
+      handleUploadImage(wizardData.uploadedFile.file, wizardData.question, true);
     }
     setCurrentView('workspace');
   };
 
-  // Render Landing Page full width if currentView === 'landing'
+  // Render special views
   if (currentView === 'landing') {
     return <LandingPage onStartExploring={() => setCurrentView('workspace')} />;
   }
 
-  // Render Component Token Reference if currentView === 'token-page'
   if (currentView === 'token-page') {
     return (
       <div className="min-h-screen bg-[var(--color-surface-canvas)] text-[var(--color-neutral-900)]">
@@ -248,9 +301,37 @@ function AppContent() {
     );
   }
 
+  if (currentView === 'examples') {
+    return (
+      <div className="min-h-screen bg-[var(--color-surface-canvas)] text-[var(--color-neutral-900)]">
+        <Header
+          sessionTitle="Examples"
+          onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
+          currentView={currentView}
+          onNavigateView={(view) => setCurrentView(view)}
+        />
+        <div className="flex min-h-[calc(100vh-3.5rem)]">
+          <Sidebar
+            conversations={conversations}
+            activeConversationId={activeConversationId}
+            onSelectConversation={handleSelectConversation}
+            onNewConversation={() => setCurrentView('new-session')}
+            onClearConversation={handleClearConversation}
+            currentView={currentView}
+            onNavigateView={(view) => setCurrentView(view)}
+            isOpen={isMobileSidebarOpen}
+            onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          />
+          <ExamplesPage onStartSession={() => setCurrentView('new-session')} />
+        </div>
+      </div>
+    );
+  }
+
+  // Main workspace layout
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--color-surface-canvas)] text-[var(--color-neutral-900)] flex-col">
-      {/* GLOBAL TOP HEADER BAR */}
+      {/* Global Header */}
       <Header
         sessionTitle={sessionTitle}
         onTitleChange={(newTitle) => {
@@ -265,7 +346,7 @@ function AppContent() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* SIDEBAR NAVIGATION */}
+        {/* Sidebar navigation */}
         <Sidebar
           conversations={conversations}
           activeConversationId={activeConversationId}
@@ -278,7 +359,7 @@ function AppContent() {
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
 
-        {/* MAIN VIEW SWITCHER */}
+        {/* View Switcher */}
         {currentView === 'new-session' && (
           <NewSessionWizard
             onStartSession={handleStartSessionFromWizard}
@@ -288,6 +369,7 @@ function AppContent() {
 
         {currentView === 'sessions' && (
           <SessionsTable
+            sessions={conversations}
             onSelectSession={(id) => {
               handleSelectConversation(id);
               setCurrentView('workspace');
@@ -296,11 +378,14 @@ function AppContent() {
           />
         )}
 
-        {currentView === 'compare' && (
-          <ComparisonViewer
-            previousImage={previousImage}
-            activeImage={activeImage}
-            onClose={() => setCurrentView('workspace')}
+        {currentView === 'image-history' && (
+          <ImageHistory
+            images={imageHistory}
+            onSelectImage={(image) => {
+              handleSelectConversation(image.sessionId);
+              setCurrentView('workspace');
+            }}
+            onNewSession={() => setCurrentView('new-session')}
           />
         )}
 
@@ -309,10 +394,10 @@ function AppContent() {
             activeImage={activeImage}
             previousImage={previousImage}
             messages={messages}
+            suggestedQuestions={suggestedQuestions}
             onUploadImage={handleUploadImage}
             onSendMessage={handleSendMessage}
             onUploadNextBestView={(file) => handleUploadImage(file)}
-            onCompareImages={() => setCurrentView('compare')}
             isLoading={isLoading}
             loadingMessage={loadingMessage}
             errorMessage={errorMessage}
@@ -323,26 +408,6 @@ function AppContent() {
       </div>
     </div>
   );
-}
-
-function generateMockAnswer(question, activeImage) {
-  return {
-    role: 'assistant',
-    content: `I've analyzed the visual scene in "${activeImage?.name || 'Study Desk Setup'}".`,
-    items: [
-      { id: 1, label: 'Laptop', color: '#1570ef', text: 'positioned centrally on the desk.' },
-      { id: 2, label: 'Mug', color: '#d97706', text: 'white ceramic mug placed on the right.' },
-      { id: 3, label: 'Notebook', color: '#e11d48', text: 'spiral notebook open with handwriting.' },
-      { id: 4, label: 'Plant', color: '#059669', text: 'small indoor potted succulent.' },
-    ],
-    evidenceCrops: [
-      { id: 1, thumb: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=80&q=80' },
-      { id: 2, thumb: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=80&q=80' },
-      { id: 3, thumb: 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=80&q=80' },
-      { id: 4, thumb: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=80&q=80' },
-    ],
-    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  };
 }
 
 export default function App() {

@@ -26,6 +26,7 @@ export async function apiClient(endpoint, options = {}) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
+    if (response.status === 204) return null;
     return await response.json();
   } catch (err) {
     console.error(`[API Client Error ${endpoint}]:`, err);

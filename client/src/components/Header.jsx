@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 
 export default function Header({
-  sessionTitle = 'Study Desk Setup',
+  sessionTitle = '',
   onTitleChange,
   onOpenMobileSidebar,
   onNavigateView,
@@ -22,7 +22,7 @@ export default function Header({
 
   return (
     <header className="h-14 border-b border-[var(--color-neutral-200)] bg-[var(--color-surface-default)] px-4 flex items-center justify-between shrink-0 z-20">
-      {/* LEFT: Mobile Menu Button & Breadcrumb + Session Title */}
+      {/* LEFT: Mobile Menu Button + Breadcrumb + Session Title */}
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onOpenMobileSidebar}
@@ -146,9 +146,7 @@ export default function Header({
           <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center border border-blue-200">
             D
           </div>
-          <span className="hidden sm:inline text-xs font-semibold text-[var(--color-neutral-800)]">
-            Dhivyasri M
-          </span>
+          <span className="hidden sm:inline text-xs font-semibold text-[var(--color-neutral-800)]">Dhivyasri M</span>
           <svg className="w-3.5 h-3.5 text-[var(--color-neutral-500)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>

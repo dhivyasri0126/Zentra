@@ -31,7 +31,13 @@ If 'userPrompt' is empty or missing:
 - Set 'next_best_view_prompt' to: 'Select one of the suggested questions above or ask your own question about the image.'
 
 RULE 4 - SUFFICIENT EVIDENCE:
-If the visual evidence is 100% clear and conclusive to answer the user query or selected question, set 'sufficient' to true and fill 'verified_answer'.`;
+If the visual evidence is 100% clear and conclusive to answer the user query or selected question, set 'sufficient' to true and fill 'verified_answer'.
+
+RULE 5 - TEMPORAL & PHYSICAL PRESENCE DISCONNECTIONS:
+If the user asks questions about real-time location, current presence, or immediate physical state (e.g., 'Where is it now?', 'Is it still there?', 'Who took it?'):
+- Clearly state that you are analyzing a static past image/photo capture.
+- Explain that you cannot confirm its current real-time physical location or status.
+- Answer based only on where it WAS positioned at the time the photo was taken.`;
 
 router.post('/verify', upload.single('image'), async (req, res, next) => {
   try {
@@ -127,7 +133,8 @@ router.post('/verify', upload.single('image'), async (req, res, next) => {
 
     // Resilient generation with automatic retry on temporary 503 spikes
     let response;
-    const modelsToTry = ['gemini-3.8-flash', 'gemini-3.6-flash','gemini-3.5-flash'];
+    // const modelsToTry = ['gemini-3.8-flash', 'gemini-3.6-flash','gemini-3.5-flash'];
+    const modelsToTry = ['gemini-3.5-flash'];
     let lastError = null;
 
     for (const modelName of modelsToTry) {
@@ -180,6 +187,34 @@ router.post('/verify', upload.single('image'), async (req, res, next) => {
   }
 });
 
+// DELETE all persisted anonymous session data. The client uses this to start
+// each product access with a clean workspace.
+router.delete('/sessions', async (_req, res, next) => {
+  try {
+    const result = await pool.query('DELETE FROM sessions');
+    return res.status(200).json({ deletedSessions: result.rowCount });
+  } catch (error) {
+    console.error('[Zentra Session Reset Error]:', error);
+    next(error);
+  }
+});
+
+// DELETE one persisted session and its cascaded images/history.
+router.delete('/session/:sessionId', async (req, res, next) => {
+  try {
+    const { sessionId } = req.params;
+    const result = await pool.query('DELETE FROM sessions WHERE id = $1', [sessionId]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Session not found.' });
+    }
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error('[Zentra Session Delete Error]:', error);
+    next(error);
+  }
+});
 
 // GET Session History
 router.get('/session/:sessionId', async (req, res, next) => {
@@ -204,8 +239,89 @@ router.get('/session/:sessionId', async (req, res, next) => {
         createdAt: row.created_at,
       })),
     });
+
   } catch (error) {
     console.error('[Zentra Session Fetch Error]:', error);
+    next(error);
+  }
+});
+
+// GET All Sessions (For History Sidebar / Sessions Table)
+router.get('/sessions', async (_req, res, next) => {
+
+  try {
+    const sessionsResult = await pool.query(`
+      SELECT
+        s.id,
+        s.prompt,
+        s.created_at,
+        COUNT(DISTINCT si.id) AS image_count,
+        COUNT(DISTINCT sh.id) AS message_count,
+        MAX(sh.created_at) AS last_activity,
+        latest_image.mime_type AS thumbnail_mime_type,
+        latest_image.image_data AS thumbnail_data
+      FROM sessions s
+      LEFT JOIN session_images si ON s.id = si.session_id
+      LEFT JOIN session_history sh ON s.id = sh.session_id
+      LEFT JOIN LATERAL (
+        SELECT mime_type, image_data
+        FROM session_images
+        WHERE session_id = s.id
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+      ) latest_image ON true
+      GROUP BY s.id, s.prompt, s.created_at, latest_image.mime_type, latest_image.image_data
+      ORDER BY COALESCE(MAX(sh.created_at), s.created_at) DESC
+    `);
+
+    return res.status(200).json({
+      sessions: sessionsResult.rows.map((row) => ({
+        id: row.id,
+        title: row.prompt || 'Untitled Session',
+        imageCount: `${row.image_count} image${row.image_count === '1' ? '' : 's'}`,
+        messageCount: parseInt(row.message_count, 10),
+        createdAt: row.created_at,
+        lastActivity: row.last_activity || row.created_at,
+        thumbnail: row.thumbnail_data
+          ? `data:${row.thumbnail_mime_type};base64,${row.thumbnail_data}`
+          : '',
+      })),
+    });
+  } catch (error) {
+    console.error('[Zentra All Sessions Fetch Error]:', error);
+    next(error);
+  }
+});
+
+// GET every uploaded image for the dedicated image history view.
+router.get('/images', async (_req, res, next) => {
+  try {
+    const imagesResult = await pool.query(`
+      SELECT
+        si.id,
+        si.session_id,
+        si.mime_type,
+        si.image_data,
+        si.created_at,
+        COALESCE(s.prompt, 'Untitled Session') AS session_title
+      FROM session_images si
+      JOIN sessions s ON s.id = si.session_id
+      ORDER BY si.created_at DESC, si.id DESC
+    `);
+
+    return res.status(200).json({
+      images: imagesResult.rows.map((row) => ({
+        id: row.id,
+        sessionId: row.session_id,
+        sessionTitle: row.session_title,
+        name: `Image ${row.id}`,
+        mimeType: row.mime_type,
+        imageData: `data:${row.mime_type};base64,${row.image_data}`,
+        createdAt: row.created_at,
+      })),
+    });
+  } catch (error) {
+    console.error('[Zentra Image History Fetch Error]:', error);
     next(error);
   }
 });

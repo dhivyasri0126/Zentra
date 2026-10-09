@@ -18,10 +18,23 @@ export default function createApp() {
   // CORS Configuration
   app.use(
     cors({
-      origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps, curl, Postman)
+        if (!origin) return callback(null, true);
+        if (
+          origin === 'http://localhost:5173' ||
+          origin === 'http://localhost:5174' ||
+          origin === 'http://localhost:3000' ||
+          origin === process.env.CLIENT_ORIGIN
+        ) {
+          return callback(null, true);
+        }
+        return callback(null, true); // Dev hackathon flexibility
+      },
       credentials: true,
     })
   );
+
 
   // Body Parsing
   app.use(express.json({ limit: '10mb' }));

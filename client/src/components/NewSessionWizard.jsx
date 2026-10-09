@@ -3,12 +3,7 @@ import { useState } from 'react';
 export default function NewSessionWizard({ onStartSession, onCancel }) {
   const [step, setStep] = useState(1);
   const [question, setQuestion] = useState('What objects are visible in this image?');
-  const [uploadedFile, setUploadedFile] = useState({
-    name: 'study_desk.jpg',
-    size: '1.8 MB',
-    dimensions: '1920 × 1280',
-    previewUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=800&q=80',
-  });
+  const [uploadedFile, setUploadedFile] = useState(null);
   const [analysisType, setAnalysisType] = useState('General Understanding');
   const [detailLevel, setDetailLevel] = useState('Balanced');
   const [focusArea, setFocusArea] = useState('Auto-detect');
